@@ -4,5 +4,6 @@
     {
         public string PrintName { get; set; }
         public string SignDate { get; set; }
+        public string SigImage { get; set; }
     }
 }
