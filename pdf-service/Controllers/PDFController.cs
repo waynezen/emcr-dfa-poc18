@@ -58,27 +58,21 @@ namespace pdfservice.Controllers
                 dmgProvince = "dsgdfag",
                 dmgDescription = "xdgdg",
 
-                signatures = new[] {
-                    new { PrintName = "test name1", SignDate = "test date1"},
-                    new { PrintName = "test name2", SignDate = "test date2" },
+                signatures = new SignatureGroup[] {
+                    new SignatureGroup { PrintName = "test name1", SignDate = "test date1"},
+                    new SignatureGroup { PrintName = "test name2", SignDate = "test date2" },
                     }
             };
-
-            var foo = JsonConvert.SerializeObject(rawdata);
-            var bar = JsonConvert.DeserializeObject(foo);
-
 
 
             string filename = $"Templates/{template}.mustache";
             if (System.IO.File.Exists(filename))
             {
                 string format = System.IO.File.ReadAllText(filename);
+                HandlebarsTemplate<object, object> handlebar = GetHandlebarsTemplate(format);
 
-                var handlebar = Handlebars.Compile(format);
-
-                var html = handlebar(bar);
-
-                //var html = stubble.Render(format, rawdata);
+                handlebar = Handlebars.Compile(format);
+                var html = handlebar(rawdata);
 
                 return Content(html, "text/html", Encoding.UTF8);
             }
@@ -123,7 +117,9 @@ namespace pdfservice.Controllers
                 try
                 {
                     string format = System.IO.File.ReadAllText(filename);
-                    var handlebar = Handlebars.Compile(format);
+
+                    // 2024-04-15 Register Handlebar helper (extra features)
+                    HandlebarsTemplate<object, object> handlebar = GetHandlebarsTemplate(format);
                     html = handlebar(parameters);
 
                 }
@@ -166,6 +162,51 @@ namespace pdfservice.Controllers
             return new NotFoundResult();
         }
 
+        private static HandlebarsTemplate<object, object> GetHandlebarsTemplate(string format)
+        {
+            Handlebars.RegisterHelper("arraysig", (outputwriter, options, context, arguments) =>
+            {
+                try
+                {
+                    if (arguments.Length != 2)
+                    {
+                        throw new HandlebarsException("{{#arraysig}} helper must have exactly 2 arguments");
+                    }
+
+                    if (arguments[0] is IEnumerable<SignatureGroup>)
+                    {
+                        var sigList = arguments[0] as IEnumerable<SignatureGroup>;
+                        var sigArray = sigList.ToArray<SignatureGroup>();
+                        int.TryParse(arguments[1].ToString(), out int sigPosn);
+
+                        if (sigPosn < sigArray.Length)
+                        {
+                            SignatureGroup result = sigArray[sigPosn];
+
+                            options.Template(outputwriter, result);
+                        }
+                        else
+                        {
+                            options.Inverse(outputwriter, context);
+                            //HandlebarsExtensions.WriteSafeString(outputwriter, "");
+                        }
+                    }
+                    else
+                    {
+                        throw new HandlebarsException("{{arraysig}} 1st parameter must be an array of SignatureGroup");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"{{arraysig unexpected exception: {ex.Message}");
+                }
+
+            });
+
+            var handlebar = Handlebars.Compile(format);
+            return handlebar;
+        }
+
         [HttpPost]
         [Route("GetHash/{template}")]
         public IActionResult GetHash([FromBody] Dictionary<string, object> rawdata, string template)
@@ -186,5 +227,6 @@ namespace pdfservice.Controllers
 
             return new NotFoundResult();
         }
+
     }
 }

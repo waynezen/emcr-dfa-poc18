@@ -1,4 +1,10 @@
 using emcr_dfa_poc18.Services;
+using HandlebarsDotNet;
+using HandlebarsDotNet.Helpers;
+using HandlebarsDotNet.Helpers.Enums;
+using Microsoft.Extensions.Options;
+using Stubble.Core.Contexts;
+using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
