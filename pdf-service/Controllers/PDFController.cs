@@ -32,12 +32,14 @@ namespace pdfservice.Controllers
     public class PDFController : Controller
     {
         readonly IConverter _generatePdf;
+        private readonly IPdfServiceWebUtility _pdfWebUtility;
         private readonly IConfiguration Configuration;
         protected ILogger _logger;
 
-        public PDFController(IConfiguration configuration, ILoggerFactory loggerFactory, IConverter generatePdf)
+        public PDFController(IConfiguration configuration, ILoggerFactory loggerFactory, IConverter generatePdf, IPdfServiceWebUtility pdfWebUtility)
         {
             _generatePdf = generatePdf;
+            _pdfWebUtility = pdfWebUtility;
             Configuration = configuration;
             _logger = loggerFactory.CreateLogger(typeof(PDFController));
         }
@@ -58,9 +60,9 @@ namespace pdfservice.Controllers
                 dmgProvince = "dsgdfag",
                 dmgDescription = "xdgdg",
 
-                signatures = new SignatureGroup[] {
-                    new SignatureGroup { PrintName = "test name1", SignDate = "test date1"},
-                    new SignatureGroup { PrintName = "test name2", SignDate = "test date2" },
+                signatures = new SignatureGroupRequestModel[] {
+                    new SignatureGroupRequestModel { PrintName = "test name1", SignDate = "test date1"},
+                    new SignatureGroupRequestModel { PrintName = "test name2", SignDate = "test date2" },
                     }
             };
 
@@ -104,11 +106,23 @@ namespace pdfservice.Controllers
                 .FirstOrDefault()
                 .ToString();
 
-            // deserialize "signature" entry correctly
-            SignatureGroup[] signatures = JsonConvert.DeserializeObject<SignatureGroup[]>(sigparms);
+            SignatureGroupViewModel[] signaturesViewModel = null;
+
+            try
+            {
+                // deserialize "signature" entry correctly
+                var signaturesRequest = JsonConvert.DeserializeObject<SignatureGroupRequestModel[]>(sigparms);
+                // convert SignatureGroupRequestModel -> SignatureGroupViewModel
+                signaturesViewModel = _pdfWebUtility.ConvertSignatureGroup(signaturesRequest);
+
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
 
             // add signatures back into Mustache data context
-            parameters.Add("signatures", signatures);
+            parameters.Add("signatures", signaturesViewModel);
 
             if (System.IO.File.Exists(filename))
             {
@@ -127,9 +141,6 @@ namespace pdfservice.Controllers
                 {
                     Debug.WriteLine(ex);
                 }
-
-
-                //var html = stubble.Render(format, rawdata);
 
                 var doc = new HtmlToPdfDocument()
                 {
@@ -162,6 +173,8 @@ namespace pdfservice.Controllers
             return new NotFoundResult();
         }
 
+
+
         private static HandlebarsTemplate<object, object> GetHandlebarsTemplate(string format)
         {
             Handlebars.RegisterHelper("arraysig", (outputwriter, options, context, arguments) =>
@@ -173,15 +186,15 @@ namespace pdfservice.Controllers
                         throw new HandlebarsException("{{#arraysig}} helper must have exactly 2 arguments");
                     }
 
-                    if (arguments[0] is IEnumerable<SignatureGroup>)
+                    if (arguments[0] is IEnumerable<SignatureGroupViewModel>)
                     {
-                        var sigList = arguments[0] as IEnumerable<SignatureGroup>;
-                        var sigArray = sigList.ToArray<SignatureGroup>();
+                        var sigList = arguments[0] as IEnumerable<SignatureGroupViewModel>;
+                        var sigArray = sigList.ToArray<SignatureGroupViewModel>();
                         int.TryParse(arguments[1].ToString(), out int sigPosn);
 
                         if (sigPosn < sigArray.Length)
                         {
-                            SignatureGroup result = sigArray[sigPosn];
+                            SignatureGroupViewModel result = sigArray[sigPosn];
 
                             options.Template(outputwriter, result);
                         }
@@ -206,6 +219,7 @@ namespace pdfservice.Controllers
             var handlebar = Handlebars.Compile(format);
             return handlebar;
         }
+
 
         [HttpPost]
         [Route("GetHash/{template}")]

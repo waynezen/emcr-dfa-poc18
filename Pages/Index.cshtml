@@ -4,7 +4,7 @@
     ViewData["Title"] = "Home page";
 }
 
-<form method="post">
+<form method="post" enctype="multipart/form-data">
     <fieldset name="pdfdemo">
         <div class="row">
             <div class="col-3">
@@ -78,6 +78,7 @@
             <div class="col-4">
                 <input type="text" asp-for="noinsuranceSignatures[0].PrintName" />
                 <input type="text" asp-for="noinsuranceSignatures[0].SignDate" />
+                <input asp-for="noinsuranceSignatures[0].SigImagePicker" accept="image/*"/>
             </div>
         </div>
 
@@ -89,6 +90,7 @@
             <div class="col-4">
                 <input type="text" asp-for="noinsuranceSignatures[1].PrintName" />
                 <input type="text" asp-for="noinsuranceSignatures[1].SignDate" />
+                <input asp-for="noinsuranceSignatures[1].SigImagePicker" accept="image/*"/>
             </div>
         </div>
 

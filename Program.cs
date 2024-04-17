@@ -3,6 +3,7 @@ using HandlebarsDotNet;
 using HandlebarsDotNet.Helpers;
 using HandlebarsDotNet.Helpers.Enums;
 using Microsoft.Extensions.Options;
+using pdfservice.Utils;
 using Stubble.Core.Contexts;
 using System.Diagnostics;
 
@@ -12,6 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 
 builder.Services.AddHttpClient<IPdfRequestService, PdfRequestService>();
+builder.Services.AddTransient<IPdfServiceWebUtility, PdfServiceWebUtility>();
 
 
 var app = builder.Build();

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Newtonsoft.Json;
 using pdfservice.Models;
+using pdfservice.Utils;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 
@@ -27,18 +28,22 @@ namespace emcr_dfa_poc18.Pages
     public class IndexModel : PageModel
     {
         private readonly IPdfRequestService _pdfService;
+        private readonly IPdfServiceWebUtility _pdfWebUtility;
         private readonly ILogger<IndexModel> _logger;
 
         public IndexModel(
             IPdfRequestService pdfService,
+            IPdfServiceWebUtility pdfWebUtility,
             ILogger<IndexModel> logger)
         {
             _pdfService = pdfService;
+            _pdfWebUtility = pdfWebUtility;
             _logger = logger;
 
-            noinsuranceSignatures = new List<SignatureGroup>() { new SignatureGroup(), new SignatureGroup() };
+            // create 2 signatures each for no insurance and application groups
+            noinsuranceSignatures = new List<SignatureGroupViewModel>() { new SignatureGroupViewModel(), new SignatureGroupViewModel() };
 
-
+            applicationSignatures = new List<SignatureGroupViewModel>() { new SignatureGroupViewModel(), new SignatureGroupViewModel() };
         }
 
         [BindProperty]
@@ -65,17 +70,17 @@ namespace emcr_dfa_poc18.Pages
         public string? dmgDescription { get; set; }
 
         [BindProperty]
-        public IList<SignatureGroup> noinsuranceSignatures { get; set; }
+        public List<SignatureGroupViewModel> noinsuranceSignatures { get; set; }
 
         [BindProperty]
-        public IList<SignatureGroup> applicationSignatures { get; set; }
+        public List<SignatureGroupViewModel> applicationSignatures { get; set; }
 
 
 
         public async Task<IActionResult> OnPostGeneratePDFAsync()
         {
 
-            // put together the parameters that we will pump into the template
+            // put together the parameters that we will pass to PDF Service
             Dictionary<string, object> parameters = new Dictionary<string, object>();
 
             var templateName = "dfa_application_demo";
@@ -88,9 +93,10 @@ namespace emcr_dfa_poc18.Pages
             parameters.Add("dmgDescription", this.dmgDescription ?? "");
 
 
+            var noinsSigGroup = _pdfWebUtility.ConvertSignatureGroup(this.noinsuranceSignatures);
+
             // must serialize signature data before sending over the wire
-            SignatureGroup[] noinsSigParms = noinsuranceSignatures.ToArray();
-            var sigser = JsonConvert.SerializeObject(noinsSigParms);
+            var sigser = JsonConvert.SerializeObject(noinsSigGroup);
             parameters.Add("signatures", sigser);
 
 
@@ -111,5 +117,9 @@ namespace emcr_dfa_poc18.Pages
         {
 
         }
+
+
     }
+
+    
 }

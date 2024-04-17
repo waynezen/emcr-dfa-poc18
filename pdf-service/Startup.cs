@@ -20,6 +20,7 @@ using System;
 using HealthChecks.UI.Client;
 using WkHtmlToPdfDotNet;
 using WkHtmlToPdfDotNet.Contracts;
+using pdfservice.Utils;
 
 namespace pdfservice
 {
@@ -132,6 +133,8 @@ namespace pdfservice
             {
                 services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));
             }
+
+            services.AddTransient<IPdfServiceWebUtility, PdfServiceWebUtility>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
